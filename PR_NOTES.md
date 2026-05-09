@@ -22,6 +22,16 @@ Suggested title: Port R6 replay scraper to Go
 go run ./cmd/r6-replay-scrape -max-matches 5 -no-download -progress /tmp/r6-progress.json -output-dir /tmp/r6-replays
 ```
 
+## Performance
+
+Local CPU benchmarks against equivalent Python hot paths show the Go port is faster:
+
+- Extract `replayLink`: ~18.9x faster.
+- Filename from URL: ~4.6x faster.
+- Byte formatting helper: ~2.1x faster.
+
+Detailed report: `/home/vqx/openclaw-workspace/research/r6-scraper-go-port-performance-report.md`.
+
 ## Blockers
 
 - Worker sandbox could not write `/home/vqx/openclaw-workspace/research/r6-replay-scrape-go-port-progress.md`; the main session wrote it afterward.
