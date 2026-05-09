@@ -2,25 +2,49 @@
 
 Suggested title: Port R6 replay scraper to Go
 
-## Summary
+Primary PR body draft: [`PR_DESCRIPTION.md`](./PR_DESCRIPTION.md)
 
-- Added a Go module and `cmd/r6-replay-scrape` CLI.
-- Implemented Python-equivalent match scanning, replay link extraction, resumable progress JSON, retry/backoff handling, and replay downloads.
-- Preserved `replayScrape.py` as the original Python implementation.
-- Documented Go and Python usage in `README.md`.
+## Upstream-ready summary
+
+This PR adds a Go CLI port of the existing R6 replay scraper while keeping `replayScrape.py` intact. The Go implementation scans Ubisoft match pages concurrently, extracts `replayLink` values from Next.js data or raw HTML fallback content, writes resumable JSON progress, downloads unique replay archives, and exposes bounded validation flags for safer review runs.
+
+## Highlights
+
+- Added Go module and `cmd/r6-replay-scrape` CLI.
+- Implemented Python-equivalent match scanning, replay-link extraction, progress persistence, retry/backoff behavior, stop thresholds, and replay downloads.
+- Added configurable page/download concurrency plus `-max-matches` and `-no-download` for bounded validation.
+- Preserved the original Python scraper for comparison/fallback.
+- Updated `README.md` with Go and Python usage, common flags, and validation guidance.
 - Added Go tests for replay-link parsing, URL filename derivation, nested key lookup, and progress round-tripping.
+- Added benchmarks for parser/progress helper hot paths.
 
-## Tests And Validation
+## Tests and validation
 
-- Ran `gofmt` across Go files.
-- Ran `GOCACHE=/tmp/go-build-cache go test ./...`.
-- Ran `GOCACHE=/tmp/go-build-cache go run ./cmd/r6-replay-scrape -h`.
-- A plain `go test ./...` failed before compilation because this sandbox's default Go build cache under `/home/vqx/.cache/go-build` is read-only.
-- Network validation should use bounded commands such as:
+Validated in this workspace:
 
 ```sh
-go run ./cmd/r6-replay-scrape -max-matches 5 -no-download -progress /tmp/r6-progress.json -output-dir /tmp/r6-replays
+go test ./...
 ```
+
+Previously validated while preparing the branch:
+
+```sh
+gofmt -w cmd/r6-replay-scrape/main.go internal/scraper/*.go
+GOCACHE=/tmp/go-build-cache go test ./...
+GOCACHE=/tmp/go-build-cache go run ./cmd/r6-replay-scrape -h
+```
+
+Suggested bounded reviewer check:
+
+```sh
+go run ./cmd/r6-replay-scrape \
+  -max-matches 5 \
+  -no-download \
+  -progress /tmp/r6-progress.json \
+  -output-dir /tmp/r6-replays
+```
+
+Avoid committing generated replay archives or progress files; use `/tmp` or another ignored path for validation.
 
 ## Performance
 
@@ -32,13 +56,10 @@ Local CPU benchmarks against equivalent Python hot paths show the Go port is fas
 
 Detailed report: `/home/vqx/openclaw-workspace/research/r6-scraper-go-port-performance-report.md`.
 
-## Blockers
+Caveat for PR wording: these are synthetic local microbenchmarks with no live Ubisoft requests or archive downloads. Real scrape time is still mostly network/CDN-bound.
 
-- Worker sandbox could not write `/home/vqx/openclaw-workspace/research/r6-replay-scrape-go-port-progress.md`; the main session wrote it afterward.
-- Worker sandbox could not create the nested `feature/go-port` branch or commit, so the main session created `feature-go-port-replay` and handled commit/cleanup.
+## Internal handoff notes
 
-## Suggested PR Body
-
-This PR adds a Go CLI port of the existing Python R6 replay scraper while keeping the Python script intact. The Go implementation resumes from the same style of progress JSON, scans Ubisoft match pages concurrently, extracts replay links from Next.js data or raw HTML, queues unique downloads, and supports bounded validation with `-max-matches` and `-no-download`.
-
-Tests cover pure parsing, URL filename extraction, recursive key lookup, and progress file persistence. Large replay archives are not committed; validation should keep generated artifacts under `/tmp` or another ignored location.
+- Branch: `feature-go-port-replay`
+- Current head: `f029ead` (`test: add replay scraper benchmarks`)
+- Do not include worker/sandbox blockers in the upstream PR body; they are not relevant to reviewers.
